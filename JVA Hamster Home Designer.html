@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Happy Hamster Home Designer</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Quicksand:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Quicksand', sans-serif;
+            background-color: #fbf8f3;
+        }
+        h1, h2, h3, .title-font {
+            font-family: 'Fredoka', sans-serif;
+        }
+        .cage-boundary {
+            background: linear-gradient(180deg, #f0f7f9 0%, #e1eff2 100%);
+            border: 12px solid #ffffff;
+            box-shadow: inset 0 4px 20px rgba(0,0,0,0.05), 0 10px 30px rgba(120,140,150,0.15);
+        }
+        .wood-pattern {
+            background-color: #e5c298;
+            background-image: repeating-linear-gradient(0deg, transparent, transparent 10px, rgba(0, 0, 0, 0.03) 10px, rgba(0, 0, 0, 0.03) 20px);
+        }
+        .bedding-layer {
+            transition: height 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), background-color 0.3s, backdrop-filter 0.3s, opacity 0.3s;
+            background-image: radial-gradient(circle, rgba(255, 255, 255, 0.35) 25%, transparent 25%), 
+                              radial-gradient(circle, rgba(250, 246, 240, 0.25) 30%, transparent 30%);
+            background-color: rgba(247, 243, 236, 0.35); /* High transparency white-cream paper bedding by default */
+            background-size: 20px 20px;
+            background-position: 0 0, 10px 10px;
+            backdrop-filter: blur(0.5px); /* Softened blur so submerged objects are clearly visible */
+            -webkit-backdrop-filter: blur(0.5px);
+            pointer-events: none; /* Critical: allows mouse/touch events to pass through bedding to hidden items */
+        }
+        /* High transparency mode to easily see subterranean hamster & tunnels */
+        .bedding-layer.xray-active {
+            background-color: rgba(247, 243, 236, 0.08); /* Extremely transparent background */
+            background-image: radial-gradient(circle, rgba(255, 255, 255, 0.15) 20%, transparent 20%), 
+                              radial-gradient(circle, rgba(250, 246, 240, 0.08) 20%, transparent 20%);
+            backdrop-filter: blur(0px);
+            -webkit-backdrop-filter: blur(0px);
+        }
+        .draggable-item {
+            cursor: grab;
+            transition: transform 0.2s, box-shadow 0.2s;
+            user-select: none;
+            touch-action: none;
+        }
+        .draggable-item:active {
+            cursor: grabbing;
+            transform: scale(1.08);
+            z-index: 50;
+        }
+        .placed-item {
+            position: absolute;
+            cursor: move;
+            user-select: none;
+            touch-action: none;
+            transition: filter 0.2s;
+        }
+        .placed-item:hover {
+            filter: drop-shadow(0 0 8px rgba(245, 158, 11, 0.6));
+        }
+        .placed-item.selected {
+            filter: drop-shadow(0 0 12px rgba(245, 158, 11, 0.9));
+            outline: 2px dashed #f59e0b;
+            outline-offset: 4px;
+            border-radius: 8px;
+        }
+        /* Custom scrollbar for inventory */
+        .custom-scroll::-webkit-scrollbar {
+            width: 8px;
+        }
+        .custom-scroll::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 10px;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="min-height-screen flex flex-col justify-between overflow-x-hidden">
+
+    <!-- Top Navigation / Header -->
+    <header class="bg-white border-b border-orange-100 py-3 px-6 shadow-sm">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="bg-amber-100 p-2.5 rounded-full text-2xl text-amber-600">
+                    🐹
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-slate-800 tracking-wide">Hamster Home Designer</h1>
+                    <p class="text-xs text-slate-500 font-semibold">Inspired by <span class="italic text-amber-600">Screenshot 2026-07-07 at 3.00.00 PM.jpg</span></p>
+                </div>
+            </div>
+            <!-- Interactive Quick Stats / Fun Badge -->
+            <div class="flex items-center gap-2 bg-amber-50 border border-amber-100 rounded-full px-4 py-1.5 text-sm text-amber-800 font-medium shadow-sm">
+                <span class="animate-bounce">💡</span> Hamsters need at least <strong class="underline decoration-amber-400">450+ sq in</strong> of space!
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Game Workspace -->
+    <main class="flex-grow max-w-7xl w-full mx-auto p-4 lg:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Left 8 Columns: The Cage & Customization Tools -->
+        <div class="lg:col-span-8 flex flex-col gap-4">
+            
+            <!-- Quick Education / Tip Banner -->
+            <div id="education-banner" class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-2xl p-4 flex items-start gap-3 shadow-sm transition-all duration-300">
+                <div class="text-2xl mt-0.5">🐾</div>
+                <div class="flex-grow">
+                    <h3 class="font-bold text-blue-900 text-sm md:text-base" id="banner-title">Welcome, Junior Designer!</h3>
+                    <p class="text-xs md:text-sm text-blue-700 mt-1" id="banner-desc">Let's build a safe, natural habitat like the one in our photo! Start by adding deep bedding so your hamster can tunnel.</p>
+                </div>
+                <button onclick="dismissBanner()" class="text-blue-400 hover:text-blue-600 transition-colors">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- The Cage Builder Area -->
+            <div class="relative w-full">
+                <!-- Outer Glass Cage container (aspect ratio matches standard spacious habitats) -->
+                <div id="cage-canvas" class="cage-boundary relative w-full aspect-[16/9] rounded-3xl overflow-hidden shadow-2xl bg-sky-50 flex flex-col justify-end">
+                    
+                    <!-- Background Accent Details (Windows/Wall back panel inspired by photo) -->
+                    <div class="absolute inset-x-0 top-0 h-1/2 opacity-20 border-b border-dashed border-sky-200 pointer-events-none"></div>
+                    
+                    <!-- Grid Mesh Top Vent (from Screenshot) -->
+                    <div class="absolute inset-x-12 top-0 h-6 bg-slate-300 border-x border-b border-slate-400 rounded-b-xl opacity-30 pointer-events-none"></div>
+
+                    <!-- Placed Items Container -->
+                    <div id="placed-items-layer" class="absolute inset-0 pointer-events-auto z-10"></div>
+
+                    <!-- Dynamic Bedding Layer (Adjustable Depth) -->
+                    <div id="bedding" class="bedding-layer w-full h-[30%] border-t-4 border-amber-100 relative z-20 flex flex-col justify-end">
+                        <!-- Tunneling paths hidden in the paper bedding -->
+                        <div class="absolute inset-x-0 top-4 bottom-0 opacity-40 pointer-events-none overflow-hidden">
+                            <!-- Artistic SVG representation of hamster tunnels inside the paper bedding -->
+                            <svg class="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M-50,60 C100,20 200,90 350,50 C500,10 650,80 800,40 C950,0 1100,70 1300,50" fill="none" stroke="#e8e2d7" stroke-width="24" stroke-linecap="round"/>
+                                <path d="M100,120 C300,80 400,140 600,100 C800,60 900,130 1100,95" fill="none" stroke="#e8e2d7" stroke-width="20" stroke-linecap="round" stroke-dasharray="10 15"/>
+                            </svg>
+                        </div>
+                        
+                        <!-- Fluffy texture bits -->
+                        <div class="absolute inset-x-0 top-0 h-4 bg-repeat-x pointer-events-none" style="background-image: radial-gradient(circle, #f7f3ec 50%, transparent 50%); background-size: 12px 12px; transform: translateY(-6px);"></div>
+
+                        <!-- Bedding Height Info Indicator -->
+                        <div class="absolute right-4 top-2 bg-amber-600/10 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-full pointer-events-none tracking-wide uppercase">
+                            <span id="bedding-depth-text">6 Inch</span> Deep Bedding
+                        </div>
+                    </div>
+
+                    <!-- Cage Wooden Base Frame Legs -->
+                    <div class="absolute -bottom-1 left-8 w-6 h-3 bg-amber-800 rounded-b-md opacity-70"></div>
+                    <div class="absolute -bottom-1 right-8 w-6 h-3 bg-amber-800 rounded-b-md opacity-70"></div>
+                </div>
+
+                <!-- Delete Selection Overlay Button (Shows when an item inside the cage is clicked) -->
+                <div id="item-control-panel" class="absolute top-4 left-4 z-30 hidden flex flex-wrap gap-2">
+                    <button onclick="removeSelected()" class="bg-red-500 hover:bg-red-600 text-white text-xs font-bold px-3 py-2 rounded-xl shadow-lg flex items-center gap-1.5 transition-all">
+                        <i class="fa-solid fa-trash"></i> Remove Selected
+                    </button>
+                    <button onclick="flipSelected()" class="bg-slate-700 hover:bg-slate-800 text-white text-xs font-bold px-3 py-2 rounded-xl shadow-lg flex items-center gap-1.5 transition-all">
+                        <i class="fa-solid fa-repeat"></i> Flip Orientation
+                    </button>
+                    <button onclick="rotateSelected(45)" class="bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold px-3 py-2 rounded-xl shadow-lg flex items-center gap-1.5 transition-all">
+                        <i class="fa-solid fa-arrow-rotate-right"></i> Rotate 45°
+                    </button>
+                    <button onclick="rotateSelected(90)" class="bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold px-3 py-2 rounded-xl shadow-lg flex items-center gap-1.5 transition-all">
+                        <i class="fa-solid fa-rotate"></i> Rotate 90°
+                    </button>
+                </div>
+            </div>
+
+            <!-- Interactive Sliders / Settings (Direct Bedding control) -->
+            <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
+                <div class="flex flex-col md:flex-row items-center gap-6 w-full md:w-auto">
+                    <div class="flex items-center gap-3 w-full md:w-auto">
+                        <div class="bg-sky-100 text-sky-600 p-2 rounded-xl text-lg">
+                            <i class="fa-solid fa-up-down"></i>
+                        </div>
+                        <div class="w-full">
+                            <label for="bedding-slider" class="text-xs font-bold text-slate-700 block mb-0.5">Bedding Depth (Burrowing Space)</label>
+                            <input id="bedding-slider" type="range" min="15" max="50" value="30" oninput="updateBeddingHeight(this.value)" class="w-full md:w-40 accent-amber-500 h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer">
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center gap-3 w-full md:w-auto">
+                        <div class="bg-amber-100 text-amber-600 p-2 rounded-xl text-lg">
+                            <i class="fa-solid fa-eye-slash"></i>
+                        </div>
+                        <div class="w-full">
+                            <label for="opacity-slider" class="text-xs font-bold text-slate-700 block mb-0.5">Bedding Opacity</label>
+                            <input id="opacity-slider" type="range" min="10" max="100" value="45" oninput="updateBeddingOpacity(this.value)" class="w-full md:w-40 accent-amber-500 h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap gap-2 w-full md:w-auto justify-end">
+                    <button id="xray-toggle-btn" onclick="toggleXrayMode()" class="bg-amber-100 hover:bg-amber-200 text-amber-800 text-xs font-bold px-3 py-2 rounded-xl border border-amber-200 transition-all flex items-center gap-1.5">
+                        <span id="xray-icon">🔍</span> <span id="xray-text">Burrow X-Ray Mode: ON</span>
+                    </button>
+                    <button onclick="clearCage()" class="text-slate-500 hover:text-slate-800 text-xs font-bold px-3 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 transition-all">
+                        <i class="fa-solid fa-rotate-left mr-1"></i> Start Over
+                    </button>
+                    <button id="view-inspirations-btn" onclick="autoBuildExcellent()" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold px-3 py-2 rounded-xl border border-emerald-200 transition-all flex items-center gap-1.5">
+                        <i class="fa-solid fa-magic-wand-sparkles text-emerald-500"></i> Auto-Setup Cage
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right 4 Columns: The Toy Chest Inventory & Safe Checklist -->
+        <div class="lg:col-span-4 flex flex-col gap-6">
+            
+            <!-- Safe Home Checklist Panel -->
+            <div class="bg-white p-5 rounded-3xl border border-orange-100 shadow-md">
+                <h3 class="text-base font-bold text-slate-800 flex items-center gap-2 mb-3">
+                    <span class="text-amber-500"><i class="fa-solid fa-circle-check"></i></span>
+                    Healthy Home Checklist
+                </h3>
+                <ul class="space-y-2.5 text-xs text-slate-600 font-medium">
+                    <li id="chk-bedding" class="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-100 transition-all">
+                        <span class="flex items-center gap-2">
+                            <span class="status-icon text-slate-400"><i class="fa-regular fa-circle"></i></span>
+                            6+ inches deep bedding (Burrows)
+                        </span>
+                        <span class="badge text-[10px] px-1.5 py-0.5 rounded bg-slate-200 text-slate-600">Pending</span>
+                    </li>
+                    <li id="chk-wheel" class="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-100 transition-all">
+                        <span class="flex items-center gap-2">
+                            <span class="status-icon text-slate-400"><i class="fa-regular fa-circle"></i></span>
+                            Large Wheel (Back safety)
+                        </span>
+                        <span class="badge text-[10px] px-1.5 py-0.5 rounded bg-slate-200 text-slate-600">Pending</span>
+                    </li>
+                    <li id="chk-hides" class="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-100 transition-all">
+                        <span class="flex items-center gap-2">
+                            <span class="status-icon text-slate-400"><i class="fa-regular fa-circle"></i></span>
+                            Multi-Chamber Hide / Bridges
+                        </span>
+                        <span class="badge text-[10px] px-1.5 py-0.5 rounded bg-slate-200 text-slate-600">Pending</span>
+                    </li>
+                    <li id="chk-water" class="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-100 transition-all">
+                        <span class="flex items-center gap-2">
+                            <span class="status-icon text-slate-400"><i class="fa-regular fa-circle"></i></span>
+                            Water Station
+                        </span>
+                        <span class="badge text-[10px] px-1.5 py-0.5 rounded bg-slate-200 text-slate-600">Pending</span>
+                    </li>
+                    <li id="chk-hamster" class="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-100 transition-all">
+                        <span class="flex items-center gap-2">
+                            <span class="status-icon text-slate-400"><i class="fa-regular fa-circle"></i></span>
+                            A happy Hamster!
+                        </span>
+                        <span class="badge text-[10px] px-1.5 py-0.5 rounded bg-slate-200 text-slate-600">Pending</span>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Cage Inventory Selection -->
+            <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-md flex-grow flex flex-col min-h-[380px]">
+                <div class="mb-3">
+                    <h2 class="text-lg font-bold text-slate-800">Hamster Toy Chest</h2>
+                    <p class="text-xs text-slate-400">Click items below to add them to your natural cage setup!</p>
+                </div>
+                
+                <!-- Category Tabs -->
+                <div class="flex gap-1 border-b border-slate-100 pb-2 mb-4">
+                    <button onclick="filterInventory('all')" id="tab-all" class="text-xs font-bold px-2.5 py-1.5 rounded-lg bg-amber-50 text-amber-700 border border-amber-100 transition-all">All</button>
+                    <button onclick="filterInventory('essentials')" id="tab-essentials" class="text-xs font-semibold px-2.5 py-1.5 rounded-lg text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-all">Essentials</button>
+                    <button onclick="filterInventory('nature')" id="tab-nature" class="text-xs font-semibold px-2.5 py-1.5 rounded-lg text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-all">Natural Decor</button>
+                </div>
+
+                <!-- Scrolling Inventory Space -->
+                <div id="inventory-grid" class="grid grid-cols-2 gap-3 overflow-y-auto max-h-[320px] custom-scroll pr-1">
+                    <!-- Item cards will be programmatically populated here with beautiful SVGs or high fidelity details -->
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Footer Information -->
+    <footer class="bg-slate-900 text-slate-400 py-6 px-6 mt-12 border-t border-slate-800">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-xs">
+            <p>© 2026 Kids Hamster Care Educational Series. Proudly promoting natural husbandry.</p>
+            <div class="flex gap-4">
+                <a href="#" class="hover:text-white transition-colors">How to clean?</a>
+                <span>•</span>
+                <a href="#" class="hover:text-white transition-colors">Diet Guide</a>
+                <span>•</span>
+                <a href="#" class="hover:text-white transition-colors">Burrowing Science</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Interactive script controlling logic, drag-and-drop mechanics, and custom builders -->
+    <script>
+        // Inventory definition using beautiful SVGs representing real products shown in Screenshot & rendition
+        const inventoryItems = [
+            {
+                id: 'wheel',
+                name: 'Large Wood Wheel',
+                category: 'essentials',
+                desc: 'A large, solid-surface 11" wooden running wheel to prevent spinal damage.',
+                html: `
+                    <svg class="w-full h-full" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="44" fill="#f8fafc" stroke="#d97706" stroke-width="5"/>
+                        <circle cx="50" cy="50" r="38" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4 2"/>
+                        <rect x="46" y="22" width="8" height="56" rx="4" fill="#e5e7eb"/>
+                        <rect x="22" y="46" width="56" height="8" rx="4" fill="#e5e7eb"/>
+                        <circle cx="50" cy="50" r="14" fill="#b45309"/>
+                        <circle cx="50" cy="50" r="6" fill="#78350f"/>
+                    </svg>
+                `,
+                checklistKey: 'wheel',
+                defaultWidth: 110,
+                defaultHeight: 110
+            },
+            {
+                id: 'hideout',
+                name: 'Multi-Chamber Box',
+                category: 'essentials',
+                desc: 'Replicates natural underground nests with dark, modular safety chambers.',
+                html: `
+                    <svg class="w-full h-full" viewBox="0 0 100 100">
+                        <rect x="10" y="35" width="80" height="55" rx="8" fill="#d97706"/>
+                        <path d="M5,42 L50,15 L95,42" fill="none" stroke="#78350f" stroke-width="6" stroke-linejoin="round"/>
+                        <rect x="15" y="40" width="70" height="45" rx="4" fill="#fdd5bd"/>
+                        <!-- Cloud/Bubble Doorway inspired by Screenshot -->
+                        <path d="M 35 85 L 35 68 C 35 58, 65 58, 65 68 L 65 85 Z" fill="#78350f"/>
+                    </svg>
+                `,
+                checklistKey: 'hides',
+                defaultWidth: 130,
+                defaultHeight: 110
+            },
+            {
+                id: 'bendy_bridge',
+                name: 'Log Bridge',
+                category: 'nature',
+                desc: 'Natural flexible wooden logs, excellent for visual screening and climbing.',
+                html: `
+                    <svg class="w-full h-full" viewBox="0 0 100 80">
+                        <path d="M10,65 C25,25 75,25 90,65" fill="none" stroke="#78350f" stroke-width="20" stroke-linecap="butt"/>
+                        <path d="M10,65 C25,25 75,25 90,65" fill="none" stroke="#d97706" stroke-width="14" stroke-linecap="butt" stroke-dasharray="3 4"/>
+                    </svg>
+                `,
+                checklistKey: 'hides',
+                defaultWidth: 100,
+                defaultHeight: 80
+            },
+            {
+                id: 'tunnel',
+                name: 'Burrow Tube',
+                category: 'nature',
+                desc: 'Spawns directly inside the bedding layer for instant underground navigation.',
+                html: `
+                    <svg class="w-full h-full" viewBox="0 0 120 70">
+                        <rect x="10" y="15" width="100" height="40" rx="20" fill="#f3e8ff" stroke="#c084fc" stroke-width="4"/>
+                        <rect x="20" y="23" width="80" height="24" rx="12" fill="none" stroke="#d8b4fe" stroke-width="2" stroke-dasharray="4 4"/>
+                        <circle cx="15" cy="35" r="10" fill="#c084fc"/>
+                        <circle cx="105" cy="35" r="10" fill="#c084fc"/>
+                    </svg>
+                `,
+                checklistKey: 'hides',
+                defaultWidth: 120,
+                defaultHeight: 70
+            },
+            {
+                id: 'mushroom',
+                name: 'Wooden Mushroom',
+                category: 'nature',
+                desc: 'Cute natural styling piece from the photo, adds organic variety to forage.',
+                html: `
+                    <svg class="w-full h-full" viewBox="0 0 80 80">
+                        <rect x="33" y="40" width="14" height="35" rx="7" fill="#f5e0c3" stroke="#b45309" stroke-width="2"/>
+                        <path d="M15,42 C15,15 65,15 65,42 Z" fill="#ea580c"/>
+                        <circle cx="30" cy="28" r="4" fill="#ffffff"/>
+                        <circle cx="48" cy="24" r="5" fill="#ffffff"/>
+                        <circle cx="55" cy="34" r="3.5" fill="#ffffff"/>
+                    </svg>
+                `,
+                checklistKey: 'nature',
+                defaultWidth: 60,
+                defaultHeight: 60
+            },
+            {
+                id: 'driftwood',
+                name: 'Natural Grapevine Branch',
+                category: 'nature',
+                desc: 'Adds rough textures to wear down claws and keep your hamster nimble.',
+                html: `
+                    <svg class="w-full h-full" viewBox="0 0 120 80">
+                        <!-- Intricate wood texture branch -->
+                        <path d="M15,55 Q40,30 70,50 T110,35 Q100,50 80,48 T30,68 Z" fill="#92400e" stroke="#78350f" stroke-width="2"/>
+                        <path d="M45,42 Q60,15 80,25" fill="none" stroke="#78350f" stroke-width="6" stroke-linecap="round"/>
+                        <path d="M75,50 Q85,65 105,60" fill="none" stroke="#78350f" stroke-width="4" stroke-linecap="round"/>
+                    </svg>
+                `,
+                checklistKey: 'nature',
+                defaultWidth: 120,
+                defaultHeight: 80
+            },
+            {
+                id: 'water_station',
+                name: 'Clean Water Bottle',
+                category: 'essentials',
+                desc: 'Continuous clean hydration access with wooden stand mount.',
+                html: `
+                    <svg class="w-full h-full" viewBox="0 0 80 120">
+                        <rect x="25" y="20" width="30" height="90" rx="4" fill="#e5c298" stroke="#78350f" stroke-width="3"/>
+                        <rect x="33" y="28" width="14" height="50" rx="7" fill="#e0f2fe" stroke="#38bdf8" stroke-width="2"/>
+                        <!-- Spout -->
+                        <path d="M30,85 L20,95" fill="none" stroke="#94a3b8" stroke-width="6" stroke-linecap="round"/>
+                        <circle cx="18" cy="97" r="2" fill="#ef4444"/>
+                    </svg>
+                `,
+                checklistKey: 'water',
+                defaultWidth: 60,
+                defaultHeight: 90
+            },
+            {
+                id: 'water_bowl',
+                name: 'Ceramic Water Bowl',
+                category: 'essentials',
+                desc: 'A heavy, shallow ceramic dish recommended for natural, stress-free drinking without neck strain.',
+                html: `
+                    <svg class="w-full h-full" viewBox="0 0 80 60">
+                        <ellipse cx="40" cy="38" rx="33" ry="17" fill="#cbd5e1"/>
+                        <ellipse cx="40" cy="35" rx="32" ry="16" fill="#f8fafc"/>
+                        <ellipse cx="40" cy="36" rx="27" ry="11" fill="#bae6fd"/>
+                        <path d="M 18 36 Q 40 42 62 36" fill="none" stroke="#38bdf8" stroke-width="2"/>
+                        <ellipse cx="28" cy="32" rx="4" ry="2" fill="#ffffff" opacity="0.6"/>
+                    </svg>
+                `,
+                checklistKey: 'water',
+                defaultWidth: 60,
+                defaultHeight: 45
+            },
+            {
+                id: 'chew_sticks',
+                name: 'Applewood Sticks',
+                category: 'nature',
+                desc: 'Natural sweet twigs tied in a bundle. Helps hamsters wear down their continuously growing teeth.',
+                html: `
+                    <svg class="w-full h-full" viewBox="0 0 80 60">
+                        <rect x="10" y="24" width="60" height="8" rx="3" fill="#a16207" transform="rotate(-10 40 30)"/>
+                        <rect x="12" y="28" width="58" height="8" rx="3" fill="#78350f" transform="rotate(5 40 30)"/>
+                        <rect x="8" y="17" width="62" height="7" rx="3" fill="#854d0e" transform="rotate(-3 40 30)"/>
+                        <ellipse cx="40" cy="27" rx="4" ry="12" fill="none" stroke="#16a34a" stroke-width="2"/>
+                        <path d="M 40 15 Q 45 10 43 5 Q 38 10 40 15" fill="#4ade80"/>
+                    </svg>
+                `,
+                checklistKey: 'nature',
+                defaultWidth: 70,
+                defaultHeight: 52
+            },
+            {
+                id: 'loofah_chew',
+                name: 'Organic Loofah Chew',
+                category: 'nature',
+                desc: 'Safe, colorful dried natural loofah slices. Perfect for gnawing, dragging, and chewing.',
+                html: `
+                    <svg class="w-full h-full" viewBox="0 0 70 70">
+                        <circle cx="35" cy="35" r="28" fill="#fde047" stroke="#ca8a04" stroke-width="3"/>
+                        <circle cx="35" cy="35" r="10" fill="#fef08a"/>
+                        <path d="M 35 25 C 28 25, 25 28, 25 35 C 25 42, 28 45, 35 45 C 42 45, 45 42, 45 35 C 45 28, 42 25, 35 25 Z" fill="#ffffff" stroke="#fef08a" stroke-width="2"/>
+                        <circle cx="20" cy="28" r="3.5" fill="#ca8a04" opacity="0.6"/>
+                        <circle cx="50" cy="28" r="3.5" fill="#ca8a04" opacity="0.6"/>
+                        <circle cx="25" cy="46" r="3.5" fill="#ca8a04" opacity="0.6"/>
+                        <circle cx="45" cy="46" r="3.5" fill="#ca8a04" opacity="0.6"/>
+                        <circle cx="35" cy="16" r="4" fill="#ca8a04" opacity="0.6"/>
+                        <circle cx="35" cy="54" r="4" fill="#ca8a04" opacity="0.6"/>
+                    </svg>
+                `,
+                checklistKey: 'nature',
+                defaultWidth: 55,
+                defaultHeight: 55
+            },
+            {
+                id: 'hamster',
+                name: 'Syrian Hamster',
+                category: 'essentials',
+                desc: 'Our golden Syrian hamster! Loves to hide in tunnels and run laps.',
+                html: `
+                    <svg class="w-full h-full" viewBox="0 0 100 80" class="hamster-svg">
+                        <!-- Rounded cozy hamster body -->
+                        <ellipse cx="50" cy="45" rx="28" ry="22" fill="#f59e0b"/>
+                        <ellipse cx="50" cy="45" rx="14" ry="18" fill="#fef3c7" transform="translate(-10, 2)"/>
+                        <!-- Tiny Pink Paws -->
+                        <circle cx="34" cy="65" r="4.5" fill="#fecdd3"/>
+                        <circle cx="66" cy="65" r="4.5" fill="#fecdd3"/>
+                        <!-- White tummy patch -->
+                        <ellipse cx="50" cy="52" rx="15" ry="12" fill="#ffffff"/>
+                        <!-- Big cute eyes -->
+                        <circle cx="32" cy="40" r="4.5" fill="#0f172a"/>
+                        <circle cx="31" cy="38" r="1.5" fill="#ffffff"/>
+                        <!-- Ears -->
+                        <circle cx="32" cy="24" r="9" fill="#d97706"/>
+                        <circle cx="32" cy="24" r="5" fill="#fecdd3"/>
+                        <circle cx="68" cy="24" r="9" fill="#d97706"/>
+                        <circle cx="68" cy="24" r="5" fill="#fecdd3"/>
+                        <!-- Pink Nose & Whiskers -->
+                        <polygon points="41,45 45,45 43,48" fill="#f43f5e"/>
+                        <line x1="38" y1="48" x2="24" y2="46" stroke="#94a3b8" stroke-width="1.5"/>
+                        <line x1="38" y1="50" x2="26" y2="54" stroke="#94a3b8" stroke-width="1.5"/>
+                        <!-- Fluffy Tail -->
+                        <circle cx="78" cy="48" r="6" fill="#fef3c7"/>
+                    </svg>
+                `,
+                checklistKey: 'hamster',
+                defaultWidth: 70,
+                defaultHeight: 56
+            }
+        ];
+
+        let selectedElement = null;
+        let placedItemCounter = 0;
+        let activeFilter = 'all';
+        let xrayEnabled = true; // Enabled by default to make burrow paths instantly visible
+
+        // Adjust bedding opacity directly via the transparency slider
+        function updateBeddingOpacity(val) {
+            const bedding = document.getElementById('bedding');
+            // Map 10-100 slider range to 0.1-1.0 style opacity values
+            bedding.style.opacity = val / 100;
+        }
+
+        function toggleXrayMode() {
+            xrayEnabled = !xrayEnabled;
+            const bedding = document.getElementById('bedding');
+            const toggleBtn = document.getElementById('xray-toggle-btn');
+            const xrayText = document.getElementById('xray-text');
+            const xrayIcon = document.getElementById('xray-icon');
+
+            if (xrayEnabled) {
+                bedding.classList.add('xray-active');
+                toggleBtn.className = "bg-amber-100 hover:bg-amber-200 text-amber-800 text-xs font-bold px-3 py-2 rounded-xl border border-amber-200 transition-all flex items-center gap-1.5";
+                xrayText.innerText = "Burrow X-Ray Mode: ON";
+                xrayIcon.innerText = "🔍";
+            } else {
+                bedding.classList.remove('xray-active');
+                toggleBtn.className = "bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold px-3 py-2 rounded-xl border border-slate-300 transition-all flex items-center gap-1.5";
+                xrayText.innerText = "Burrow X-Ray Mode: OFF";
+                xrayIcon.innerText = "👁️";
+            }
+        }
+
+        // Educational tips that rotate on adding items
+        const eduTips = {
+            'wheel': {
+                title: "Incredible choice!",
+                desc: "Hamsters run up to 5 miles a night! A large wheel (at least 11 inches) keeps their backs completely flat and pain-free."
+            },
+            'hideout': {
+                title: "Superb hiding space!",
+                desc: "Wild hamsters burrow complex nests with separate sleep, food storage, and bathroom chambers. Your multi-chamber hide mimics this perfectly!"
+            },
+            'bendy_bridge': {
+                title: "Fantastic visual screens!",
+                desc: "Log bridges break up lines of sight. This makes our hamster feel protected from 'flying predators' (even inside a secure house!)."
+            },
+            'water_station': {
+                title: "Hydration is Key!",
+                desc: "Always keep water fresh. You can use a stable glass bottle or mount a secure stand like in our gorgeous wood setup photo."
+            },
+            'water_bowl': {
+                title: "Great Hydration Setup!",
+                desc: "Did you know bowls are actually preferred by many hamsters? It lets them lap up water naturally just like they would in the wild!"
+            },
+            'chew_sticks': {
+                title: "Happy chewing habits!",
+                desc: "Hamster teeth never stop growing! Safe wooden chews like Applewood keep their teeth safe, healthy, and sharp."
+            },
+            'loofah_chew': {
+                title: "Great natural foraging toy!",
+                desc: "Safe loofah chews clean their teeth and can even be stuffed with healthy organic herbs and treats to encourage natural foraging behaviors!"
+            },
+            'hamster': {
+                title: "Say Hello to Your Buddy!",
+                desc: "Our golden hamster loves its natural home. Place him under the bedding or on top of his running wheel to start exploring!"
+            }
+        };
+
+        // Restored the missing initInventory function declaration to fix the SyntaxError
+        function initInventory() {
+            const grid = document.getElementById('inventory-grid');
+            grid.innerHTML = '';
+            
+            const filtered = inventoryItems.filter(item => {
+                if (activeFilter === 'all') return true;
+                return item.category === activeFilter;
+            });
+
+            filtered.forEach(item => {
+                const card = document.createElement('div');
+                card.className = "bg-slate-50 hover:bg-amber-50/50 border border-slate-200/80 hover:border-amber-200 p-3 rounded-2xl cursor-pointer transition-all flex flex-col items-center justify-between shadow-sm hover:shadow group";
+                card.onclick = () => addItemToCage(item);
+                
+                card.innerHTML = `
+                    <div class="w-16 h-16 mb-2 flex items-center justify-center p-1 group-hover:scale-105 transition-transform duration-300">
+                        ${item.html}
+                    </div>
+                    <div class="text-center w-full">
+                        <div class="text-xs font-bold text-slate-800 leading-tight">${item.name}</div>
+                        <div class="text-[10px] text-slate-400 mt-1 line-clamp-2">${item.desc}</div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function filterInventory(category) {
+            activeFilter = category;
+            
+            // Toggle active styles on tabs
+            ['all', 'essentials', 'nature'].forEach(c => {
+                const tab = document.getElementById(`tab-${c}`);
+                if (c === category) {
+                    tab.className = "text-xs font-bold px-2.5 py-1.5 rounded-lg bg-amber-50 text-amber-700 border border-amber-100 transition-all";
+                } else {
+                    tab.className = "text-xs font-semibold px-2.5 py-1.5 rounded-lg text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-all";
+                }
+            });
+
+            initInventory();
+        }
+
+        // Add an item into the live editable cage canvas
+        function addItemToCage(itemBlueprint, presetX = null, presetY = null, isFlipped = false) {
+            placedItemCounter++;
+            const canvas = document.getElementById('cage-canvas');
+            const layer = document.getElementById('placed-items-layer');
+
+            const itemDiv = document.createElement('div');
+            itemDiv.id = `placed-${itemBlueprint.id}-${placedItemCounter}`;
+            itemDiv.className = `placed-item draggable-item`;
+            itemDiv.style.width = `${itemBlueprint.defaultWidth}px`;
+            itemDiv.style.height = `${itemBlueprint.defaultHeight}px`;
+            
+            // Custom dataset storing item information
+            itemDiv.dataset.blueprintId = itemBlueprint.id;
+            itemDiv.dataset.checklistKey = itemBlueprint.checklistKey;
+            itemDiv.dataset.flipped = isFlipped ? "true" : "false";
+            itemDiv.dataset.rotation = "0";
+
+            // Spawn inside center of cage if no coordinates provided
+            const spawnX = presetX !== null ? presetX : (canvas.clientWidth / 2 - itemBlueprint.defaultWidth / 2);
+            const spawnY = presetY !== null ? presetY : (canvas.clientHeight / 2 - itemBlueprint.defaultHeight / 2);
+            
+            itemDiv.style.left = `${spawnX}px`;
+            itemDiv.style.top = `${spawnY}px`;
+            
+            // Set rotation/flip transformations if needed
+            const transformScale = isFlipped ? 'scaleX(-1)' : 'scaleX(1)';
+            itemDiv.innerHTML = `<div class="w-full h-full transition-transform" style="transform: ${transformScale} rotate(0deg)">${itemBlueprint.html}</div>`;
+
+            // Setup Mouse and Touch Drag listeners
+            setupDragging(itemDiv);
+
+            // Item Selection / Active click controls
+            itemDiv.addEventListener('mousedown', (e) => {
+                selectItem(itemDiv);
+                e.stopPropagation();
+            });
+            itemDiv.addEventListener('touchstart', (e) => {
+                selectItem(itemDiv);
+                e.stopPropagation();
+            });
+
+            layer.appendChild(itemDiv);
+
+            // Display interesting facts to children upon placing a critical component
+            triggerEducationTip(itemBlueprint.id);
+
+            // Trigger visual checklist evaluation
+            evaluateChecklist();
+        }
+
+        // Drag & Drop Mechanics Handler supporting absolute boundaries
+        function setupDragging(elem) {
+            let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+            const canvas = document.getElementById('cage-canvas');
+
+            elem.onmousedown = dragMouseDown;
+            elem.addEventListener('touchstart', dragTouchStart, { passive: false });
+
+            function dragMouseDown(e) {
+                e = e || window.event;
+                e.preventDefault();
+                selectItem(elem);
+                // get the mouse cursor position at startup:
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                document.onmouseup = closeDragElement;
+                document.onmousemove = elementDrag;
+            }
+
+            function dragTouchStart(e) {
+                selectItem(elem);
+                const touch = e.touches[0];
+                pos3 = touch.clientX;
+                pos4 = touch.clientY;
+                
+                document.addEventListener('touchend', closeDragElement, { passive: false });
+                document.addEventListener('touchmove', elementTouchDrag, { passive: false });
+            }
+
+            function elementDrag(e) {
+                e = e || window.event;
+                e.preventDefault();
+                calculateMovement(e.clientX, e.clientY);
+            }
+
+            function elementTouchDrag(e) {
+                const touch = e.touches[0];
+                calculateMovement(touch.clientX, touch.clientY);
+            }
+
+            function calculateMovement(clientX, clientY) {
+                pos1 = pos3 - clientX;
+                pos2 = pos4 - clientY;
+                pos3 = clientX;
+                pos4 = clientY;
+
+                let newTop = elem.offsetTop - pos2;
+                let newLeft = elem.offsetLeft - pos1;
+
+                // Restrict movement strictly inside outer transparent glass container
+                const maxLeft = canvas.clientWidth - elem.clientWidth;
+                const maxTop = canvas.clientHeight - elem.clientHeight;
+
+                if (newLeft < 0) newLeft = 0;
+                if (newLeft > maxLeft) newLeft = maxLeft;
+                if (newTop < 0) newTop = 0;
+                if (newTop > maxTop) newTop = maxTop;
+
+                elem.style.top = newTop + "px";
+                elem.style.left = newLeft + "px";
+            }
+
+            function closeDragElement() {
+                // stop moving when mouse/finger releases:
+                document.onmouseup = null;
+                document.onmousemove = null;
+                document.removeEventListener('touchend', closeDragElement);
+                document.removeEventListener('touchmove', elementTouchDrag);
+                
+                // Re-evaluate checklist position rules (e.g. tunnels nested in bedding)
+                evaluateChecklist();
+            }
+        }
+
+        // Handle Active Selection Visual Outlines
+        function selectItem(elem) {
+            if (selectedElement) {
+                selectedElement.classList.remove('selected');
+            }
+            selectedElement = elem;
+            selectedElement.classList.add('selected');
+
+            // Show Top Control Center Bar
+            document.getElementById('item-control-panel').classList.remove('hidden');
+        }
+
+        // Global background click clears selection focus
+        document.getElementById('cage-canvas').addEventListener('mousedown', (e) => {
+            if (e.target.id === 'cage-canvas' || e.target.id === 'placed-items-layer' || e.target.id === 'bedding') {
+                deselectAll();
+            }
+        });
+        document.getElementById('cage-canvas').addEventListener('touchstart', (e) => {
+            if (e.target.id === 'cage-canvas' || e.target.id === 'placed-items-layer' || e.target.id === 'bedding') {
+                deselectAll();
+            }
+        });
+
+        function deselectAll() {
+            if (selectedElement) {
+                selectedElement.classList.remove('selected');
+                selectedElement = null;
+            }
+            document.getElementById('item-control-panel').classList.add('hidden');
+        }
+
+        // Delete item execution
+        function removeSelected() {
+            if (selectedElement) {
+                selectedElement.remove();
+                selectedElement = null;
+                document.getElementById('item-control-panel').classList.add('hidden');
+                evaluateChecklist();
+            }
+        }
+
+        // Helper to update CSS transform using combined flip and rotation
+        function updateTransform(elem) {
+            const innerWrapper = elem.querySelector('div');
+            if (!innerWrapper) return;
+            const isFlipped = elem.dataset.flipped === "true";
+            const rotation = parseInt(elem.dataset.rotation || "0", 10);
+            
+            const scaleStr = isFlipped ? 'scaleX(-1)' : 'scaleX(1)';
+            const rotateStr = `rotate(${rotation}deg)`;
+            
+            innerWrapper.style.transform = `${scaleStr} ${rotateStr}`;
+        }
+
+        // Mirror / flip selected element orientation
+        function flipSelected() {
+            if (selectedElement) {
+                const isFlipped = selectedElement.dataset.flipped === "true";
+                selectedElement.dataset.flipped = isFlipped ? "false" : "true";
+                updateTransform(selectedElement);
+            }
+        }
+
+        // Rotate selected element by specified degrees
+        function rotateSelected(degrees) {
+            if (selectedElement) {
+                let currentRotation = parseInt(selectedElement.dataset.rotation || "0", 10);
+                currentRotation = (currentRotation + degrees) % 360;
+                selectedElement.dataset.rotation = currentRotation.toString();
+                updateTransform(selectedElement);
+            }
+        }
+
+        // Adjust bedding depth via slider (inspired by kids learning natural nesting needs)
+        function updateBeddingHeight(val) {
+            const bedding = document.getElementById('bedding');
+            const depthText = document.getElementById('bedding-depth-text');
+            
+            // Adjust CSS height smoothly
+            bedding.style.height = `${val}%`;
+
+            // Calculate mock Inches based on slider value
+            const inches = Math.round(val / 5);
+            depthText.innerText = `${inches} Inch`;
+
+            // Visual feedback on deep bedding requirement
+            if (inches >= 6) {
+                depthText.parentElement.className = "absolute right-4 top-2 bg-emerald-600/10 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full pointer-events-none tracking-wide uppercase";
+            } else {
+                depthText.parentElement.className = "absolute right-4 top-2 bg-rose-600/10 text-rose-800 text-[10px] font-bold px-2 py-0.5 rounded-full pointer-events-none tracking-wide uppercase";
+            }
+
+            evaluateChecklist();
+        }
+
+        // Dynamically compute and test hamster welfare conditions
+        function evaluateChecklist() {
+            const placedItems = document.querySelectorAll('#placed-items-layer .draggable-item');
+            const beddingHeight = parseInt(document.getElementById('bedding-slider').value);
+            
+            // Flags
+            let hasBeddingSuccess = (beddingHeight >= 30); // 30% canvas height corresponds to healthy 6+ inches
+            let hasWheelSuccess = false;
+            let hasHideoutSuccess = false;
+            let hasWaterSuccess = false;
+            let hasHamsterSuccess = false;
+
+            placedItems.forEach(item => {
+                const key = item.dataset.checklistKey;
+                const bId = item.dataset.blueprintId;
+
+                if (bId === 'wheel') hasWheelSuccess = true;
+                if (bId === 'hideout' || bId === 'bendy_bridge' || bId === 'tunnel') hasHideoutSuccess = true;
+                if (bId === 'water_station' || bId === 'water_bowl') hasWaterSuccess = true;
+                if (bId === 'hamster') hasHamsterSuccess = true;
+            });
+
+            // Update Checklist Node UI Components
+            updateChecklistNode('chk-bedding', hasBeddingSuccess);
+            updateChecklistNode('chk-wheel', hasWheelSuccess);
+            updateChecklistNode('chk-hides', hasHideoutSuccess);
+            updateChecklistNode('chk-water', hasWaterSuccess);
+            updateChecklistNode('chk-hamster', hasHamsterSuccess);
+
+            // Trigger Happy Win state!
+            if (hasBeddingSuccess && hasWheelSuccess && hasHideoutSuccess && hasWaterSuccess && hasHamsterSuccess) {
+                triggerWinCelebration();
+            }
+        }
+
+        function updateChecklistNode(id, isSuccess) {
+            const el = document.getElementById(id);
+            const icon = el.querySelector('.status-icon');
+            const badge = el.querySelector('.badge');
+
+            if (isSuccess) {
+                el.className = "flex items-center justify-between p-2 rounded-xl bg-emerald-50 border border-emerald-100 transition-all text-slate-700 font-semibold";
+                icon.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-500"></i>';
+                badge.innerText = "Spacious & Safe!";
+                badge.className = "badge text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700";
+            } else {
+                el.className = "flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-100 transition-all text-slate-500";
+                icon.innerHTML = '<i class="fa-regular fa-circle text-slate-400"></i>';
+                badge.innerText = "Pending";
+                badge.className = "badge text-[10px] px-1.5 py-0.5 rounded bg-slate-200 text-slate-600";
+            }
+        }
+
+        // Auto Setup highly premium layout mimicking the expert reference photo "Screenshot 2026-07-07 at 3.00.00 PM.jpg"
+        function autoBuildExcellent() {
+            clearCage();
+            
+            // Boost bedding to expert standard (38% corresponding to 8" deep natural substrate)
+            document.getElementById('bedding-slider').value = 38;
+            updateBeddingHeight(38);
+
+            // Add standard layout of natural toys
+            // Position coords are calculated relative to default 1280x720 scaled representation inside dynamic containers
+            setTimeout(() => {
+                const canvas = document.getElementById('cage-canvas');
+                const cw = canvas.clientWidth;
+                const ch = canvas.clientHeight;
+
+                addItemToCage(getBlueprint('wheel'), cw * 0.1, ch * 0.35); // Left hand large wheel
+                addItemToCage(getBlueprint('hideout'), cw * 0.35, ch * 0.32); // Center large multi-chamber
+                addItemToCage(getBlueprint('bendy_bridge'), cw * 0.6, ch * 0.45, true); // Sloped bridge
+                addItemToCage(getBlueprint('water_station'), cw * 0.02, ch * 0.38); // Water on side
+                addItemToCage(getBlueprint('driftwood'), cw * 0.22, ch * 0.52); // Natural logs
+                addItemToCage(getBlueprint('mushroom'), cw * 0.52, ch * 0.55); // Mushroom décor
+                addItemToCage(getBlueprint('tunnel'), cw * 0.65, ch * 0.72); // Tunnels built directly inside paper bedding
+                addItemToCage(getBlueprint('hamster'), cw * 0.38, ch * 0.78); // Hamster placed deep within bedding tunneling!
+            }, 100);
+        }
+
+        function getBlueprint(id) {
+            return inventoryItems.find(x => x.id === id);
+        }
+
+        function clearCage() {
+            document.getElementById('placed-items-layer').innerHTML = '';
+            deselectAll();
+            evaluateChecklist();
+        }
+
+        // Display Tips & Instructions
+        function triggerEducationTip(itemId) {
+            const tip = eduTips[itemId];
+            if (tip) {
+                const banner = document.getElementById('education-banner');
+                const title = document.getElementById('banner-title');
+                const desc = document.getElementById('banner-desc');
+
+                banner.className = "bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3 shadow-sm transition-all duration-300 scale-102";
+                title.innerText = tip.title;
+                desc.innerText = tip.desc;
+
+                setTimeout(() => {
+                    banner.classList.remove('scale-102');
+                }, 300);
+            }
+        }
+
+        function dismissBanner() {
+            document.getElementById('education-banner').classList.add('hidden');
+        }
+
+        // Win state visual fanfare
+        let hasWonBefore = false;
+        function triggerWinCelebration() {
+            if (hasWonBefore) return; // Trigger confetti explosion only once per reset
+            hasWonBefore = true;
+
+            // Display celebration tip
+            const banner = document.getElementById('education-banner');
+            banner.classList.remove('hidden');
+            banner.className = "bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl p-4 flex items-start gap-3 shadow-md transition-all duration-300 animate-pulse";
+            document.getElementById('banner-title').innerText = "🏆 Professional Cage Achieved!";
+            document.getElementById('banner-desc').innerText = "Incredible job! This environment resembles top-tier professional pet-care standards. Your virtual hamster has lots of space, a safe wheel, deep bedding, and beautiful natural logs to explore!";
+
+            // Confetti explosion!
+            const duration = 2.5 * 1000;
+            const end = Date.now() + duration;
+
+            (function frame() {
+                confetti({
+                    particleCount: 4,
+                    angle: 60,
+                    spread: 55,
+                    origin: { x: 0 },
+                    colors: ['#fbbf24', '#34d399', '#60a5fa', '#f43f5e']
+                });
+                confetti({
+                    particleCount: 4,
+                    angle: 120,
+                    spread: 55,
+                    origin: { x: 1 },
+                    colors: ['#fbbf24', '#34d399', '#60a5fa', '#f43f5e']
+                });
+
+                if (Date.now() < end) {
+                    requestAnimationFrame(frame);
+                }
+            }());
+        }
+
+        // Setup page items
+        window.onload = () => {
+            initInventory();
+            
+            // Set initial state of bedding transparency
+            const bedding = document.getElementById('bedding');
+            if (xrayEnabled) {
+                bedding.classList.add('xray-active');
+            }
+            
+            // Initialize opacity based on default slider value (45%)
+            const opacitySlider = document.getElementById('opacity-slider');
+            if (opacitySlider) {
+                updateBeddingOpacity(opacitySlider.value);
+            }
+            
+            evaluateChecklist();
+        };
+    </script>
+</body>
+</html>
